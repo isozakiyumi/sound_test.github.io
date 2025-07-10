@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>マイクとMP3再生</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
   <h1>マイクとMP3再生</h1>
@@ -11,9 +12,12 @@
 
   <!-- マイク使用許可ボタン -->
   <button id="mic-btn">🎤 マイクを使う</button>
-
+  <br><br>
   <!-- 音声再生ボタン -->
-  <button id="play-btn">▶️ 音声を再生</button>
+  <button id="play-btn">▶️ 音声を再生(Audio)</button>
+  <button id="play-phaser-btn">▶️ 音声を再生（Phaser）</button>
+  <br><br>
+  <button id="stop-btn">⏹️ 音声を停止</button>
 
   <!-- MP3 プレーヤー -->
   <audio id="audio-player" loop>
@@ -35,19 +39,76 @@
       }
     }
 
+    let audio = null;
     // 再生処理
     function playAudio() {
-      const audio = document.getElementById("audio-player");
+      audio = document.getElementById("audio-player");
       audio.play().then(() => {
         console.log("再生開始");
       }).catch(err => {
         console.error("再生に失敗:", err);
       });
+      
     }
 
     // イベントリスナー登録
     document.getElementById("mic-btn").addEventListener("click", requestMicrophoneAccess);
     document.getElementById("play-btn").addEventListener("click", playAudio);
+
+
+      // Phaserゲーム設定
+    const config = {
+      type: Phaser.AUTO,
+      width: 0,  // 描画なし（音声再生だけ）
+      height: 0,
+      parent: 'game',
+      scene: {
+        preload: preload,
+        create: create
+      }
+    };
+
+    let game = null;
+    let bgm = null;
+
+    function preload() {
+      // ローカルまたはサーバ上のMP3を指定
+      this.load.audio('bgm', ['./test.mp3']);
+    }
+
+    function create() {
+      bgm = this.sound.add('bgm', { loop: true });
+    }
+
+    // 再生ボタンで実行される関数
+    function playBGM() {
+      if (!game) {
+        game = new Phaser.Game(config);
+        // Phaserが完全にロードされたら再生
+        game.events.on('ready', () => {
+          if (bgm) bgm.play();
+        });
+      } else {
+        if (bgm && !bgm.isPlaying) {
+          bgm.play();
+        }
+      }
+    }
+
+    // 音声停止処理
+    function stopBGM() {
+      if (bgm && bgm.isPlaying) {
+        bgm.stop();
+      }
+      if (audio) {
+         audio.pause();
+      }
+    }
+
+    // イベント登録
+
+    document.getElementById("play-phaser-btn").addEventListener("click", playBGM);
+    document.getElementById("stop-btn").addEventListener("click", stopBGM);
   </script>
 </body>
 </html>
