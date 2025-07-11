@@ -2,117 +2,121 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>マイクとMP3再生</title>
+  <title>音声再生 + マイク + 音量調整</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
 <body>
-  <h1>マイクとMP3再生</h1>
+  <h2>🎵 音声再生（audioタグ & Phaser）+ 🎤 マイク + 🔊 音量調整</h2>
 
   <p id="mic-status">マイク状態: 未確認</p>
 
-  <!-- マイク使用許可ボタン -->
+  <!-- 各種ボタン -->
   <button id="mic-btn">🎤 マイクを使う</button>
   <br><br>
-  <!-- 音声再生ボタン -->
-  <button id="play-btn">▶️ 音声を再生(Audio)</button>
-  <button id="play-phaser-btn">▶️ 音声を再生（Phaser）</button>
-  <br><br>
-  <button id="stop-btn">⏹️ 音声を停止</button>
 
-  <!-- MP3 プレーヤー -->
+  <!-- audioタグ再生 -->
+  <button id="audio-play-btn">▶️ audioで再生</button>
+  <br><br>
+
+  <!-- Phaser再生 -->
+  <button id="phaser-play-btn">▶️ Phaserで再生</button>
+  <button id="phaser-stop-btn">⏹️ Phaser停止</button>
+  <br><br>
+
+  <!-- 音量調整 -->
+  <button id="volume-up">🔊 音量アップ</button>
+  <button id="volume-down">🔉 音量ダウン</button>
+  <br><br>
+
+  <!-- ネイティブaudioタグ -->
   <audio id="audio-player" loop>
     <source src="./test.mp3" type="audio/mpeg">
-    お使いのブラウザは audio タグをサポートしていません。
+    このブラウザは audio タグに対応していません。
   </audio>
 
+  <!-- Phaserの描画領域（見えない） -->
+  <div id="game" style="display:none;"></div>
+
   <script>
-    // マイク使用リクエスト
-    async function requestMicrophoneAccess() {
+    // audioタグ要素取得
+    const audioEl = document.getElementById("audio-player");
+
+    // 再生/停止
+    document.getElementById("audio-play-btn").addEventListener("click", () => {
+      if (audioEl.paused) {
+        audioEl.play();
+      } else {
+        audioEl.pause();
+      }
+    });
+
+    // 音量調整（共通）
+    const changeVolume = (delta) => {
+      // audioタグ
+      let newVolume = Math.min(1, Math.max(0, audioEl.volume + delta));
+      audioEl.volume = newVolume;
+
+      // Phaser
+      if (bgm) {
+        let phaserVol = Math.min(1, Math.max(0, bgm.volume + delta));
+        bgm.setVolume(phaserVol);
+      }
+    };
+    document.getElementById("volume-up").addEventListener("click", () => changeVolume(0.1));
+    document.getElementById("volume-down").addEventListener("click", () => changeVolume(-0.1));
+
+    // マイク許可
+    document.getElementById("mic-btn").addEventListener("click", async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         document.getElementById("mic-status").textContent = "マイク状態: 使用許可されました";
-        // ストリームを使用しないなら停止
         stream.getTracks().forEach(track => track.stop());
       } catch (err) {
         document.getElementById("mic-status").textContent = "マイク状態: 許可されませんでした";
-        console.error("マイクアクセスエラー:", err);
+        console.error("マイクエラー:", err);
       }
-    }
+    });
 
-    let audio = null;
-    // 再生処理
-    function playAudio() {
-      audio = document.getElementById("audio-player");
-      audio.play().then(() => {
-        console.log("再生開始");
-      }).catch(err => {
-        console.error("再生に失敗:", err);
-      });
-      
-    }
-
-    // イベントリスナー登録
-    document.getElementById("mic-btn").addEventListener("click", requestMicrophoneAccess);
-    document.getElementById("play-btn").addEventListener("click", playAudio);
-
-
-      // Phaserゲーム設定
-   const config = {
-  type: Phaser.AUTO,
-  width: 1,
-  height: 1,
-  parent: 'game',
-  scene: {
-    preload: preload,
-    create: create
-  },
-  audio: {
-    disableWebAudio: false
-  }
-};
-
-
+    // ===== Phaser関連 =====
     let game = null;
     let bgm = null;
 
-    function preload() {
-      // ローカルまたはサーバ上のMP3を指定
-      this.load.audio('bgm', ['./test.mp3']);
-    }
+    const config = {
+      type: Phaser.AUTO,
+      width: 1,
+      height: 1,
+      parent: 'game',
+      scene: {
+        preload: function() {
+          this.load.audio('bgm', ['./test.mp3']);
+        },
+        create: function() {
+          bgm = this.sound.add('bgm', { loop: true, volume: 1 });
+        }
+      },
+      audio: {
+        disableWebAudio: false
+      }
+    };
 
-    function create() {
-      bgm = this.sound.add('bgm', { loop: true });
-    }
-
-    // 再生ボタンで実行される関数
-    function playBGM() {
+    // Phaser再生ボタン
+    document.getElementById("phaser-play-btn").addEventListener("click", () => {
       if (!game) {
         game = new Phaser.Game(config);
-        // Phaserが完全にロードされたら再生
-        game.events.on('ready', () => {
-          if (bgm) bgm.play();
-        });
+        setTimeout(() => {
+          if (bgm && !bgm.isPlaying) bgm.play();
+        }, 800); // 読み込みの猶予
       } else {
-        if (bgm && !bgm.isPlaying) {
-          bgm.play();
-        }
+        if (bgm && !bgm.isPlaying) bgm.play();
       }
-    }
+    });
 
-    // 音声停止処理
-    function stopBGM() {
+    // Phaser停止ボタン
+    document.getElementById("phaser-stop-btn").addEventListener("click", () => {
       if (bgm && bgm.isPlaying) {
         bgm.stop();
       }
-      if (audio) {
-         audio.pause();
-      }
-    }
-
-    // イベント登録
-
-    document.getElementById("play-phaser-btn").addEventListener("click", playBGM);
-    document.getElementById("stop-btn").addEventListener("click", stopBGM);
+    });
   </script>
 </body>
 </html>
