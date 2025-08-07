@@ -3,11 +3,17 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>音声再生 + マイク + 音量調整</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+  >
 </head>
 
 <body>
+   <main class="container">
   <h2>🎵 音声再生（audioタグ & Phaser）+ 🎤 マイク + 🔊 音量調整</h2>
 
   <p id="mic-status">マイク状態: 未確認</p>
@@ -37,6 +43,7 @@
 
   <!-- Phaserの描画領域（見えない） -->
   <div id="game" style="display:none;"></div>
+  </main>
 
   <script>
     // ===== audio関連 =====
