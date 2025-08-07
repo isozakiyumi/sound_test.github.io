@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <title>音声再生 + マイク + 音量調整</title>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
 </head>
+
 <body>
   <h2>🎵 音声再生（audioタグ & Phaser）+ 🎤 マイク + 🔊 音量調整</h2>
 
@@ -20,7 +22,6 @@
 
   <!-- Phaser再生 -->
   <button id="phaser-play-btn">▶️ Phaserで再生</button>
-  <button id="phaser-stop-btn">⏹️ Phaser停止</button>
   <br><br>
 
   <!-- 音量調整 -->
@@ -38,44 +39,21 @@
   <div id="game" style="display:none;"></div>
 
   <script>
+    // ===== audio関連 =====
     // audioタグ要素取得
     const audioEl = document.getElementById("audio-player");
 
-    // 再生/停止
-    document.getElementById("audio-play-btn").addEventListener("click", () => {
+    // audio 再生/停止
+    document.getElementById("audio-play-btn").addEventListener("click", (e) => {
       if (audioEl.paused) {
         audioEl.play();
+        e.target.innerHTML = "⏹️ audio停止"
       } else {
         audioEl.pause();
+        e.target.innerHTML = "▶️ audioで再生"
       }
     });
 
-    // 音量調整（共通）
-    const changeVolume = (delta) => {
-      // audioタグ
-      let newVolume = Math.min(1, Math.max(0, audioEl.volume + delta));
-      audioEl.volume = newVolume;
-
-      // Phaser
-      if (bgm) {
-        let phaserVol = Math.min(1, Math.max(0, bgm.volume + delta));
-        bgm.setVolume(phaserVol);
-      }
-    };
-    document.getElementById("volume-up").addEventListener("click", () => changeVolume(0.1));
-    document.getElementById("volume-down").addEventListener("click", () => changeVolume(-0.1));
-
-    // マイク許可
-    document.getElementById("mic-btn").addEventListener("click", async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        document.getElementById("mic-status").textContent = "マイク状態: 使用許可されました";
-        stream.getTracks().forEach(track => track.stop());
-      } catch (err) {
-        document.getElementById("mic-status").textContent = "マイク状態: 許可されませんでした";
-        console.error("マイクエラー:", err);
-      }
-    });
 
     // ===== Phaser関連 =====
     let game = null;
@@ -87,10 +65,10 @@
       height: 1,
       parent: 'game',
       scene: {
-        preload: function() {
+        preload: function () {
           this.load.audio('bgm', ['./test.mp3']);
         },
-        create: function() {
+        create: function () {
           bgm = this.sound.add('bgm', { loop: true, volume: 1 });
         }
       },
@@ -100,23 +78,82 @@
     };
 
     // Phaser再生ボタン
-    document.getElementById("phaser-play-btn").addEventListener("click", () => {
-      if (!game) {
-        game = new Phaser.Game(config);
-        setTimeout(() => {
-          if (bgm && !bgm.isPlaying) bgm.play();
-        }, 800); // 読み込みの猶予
+    document.getElementById("phaser-play-btn").addEventListener("click", (e) => {
+      if (bgm && bgm.isPlaying) {
+        bgm.stop();
+        e.target.innerHTML = "▶️ Phaserで再生"
       } else {
-        if (bgm && !bgm.isPlaying) bgm.play();
+        if (!game) {
+          game = new Phaser.Game(config);
+          setTimeout(() => {
+            bgm.play();
+          }, 800); // 読み込みの猶予
+        } else {
+          bgm.play();
+        }
+        e.target.innerHTML = "⏹️ Phaser停止"
       }
     });
 
-    // Phaser停止ボタン
-    document.getElementById("phaser-stop-btn").addEventListener("click", () => {
+    // 音量調整（共通）
+    const changeVolume = (delta) => {
+      // audioタグ
+      if (!audioEl.paused) {
+        let newVolume = Math.min(1, Math.max(0, audioEl.volume + delta));
+        audioEl.volume = newVolume;
+      }
+
+      // Phaser
       if (bgm && bgm.isPlaying) {
-        bgm.stop();
+        let phaserVol = Math.min(1, Math.max(0, bgm.volume + delta));
+        bgm.setVolume(phaserVol);
+      }
+    };
+    document.getElementById("volume-up").addEventListener("click", () => changeVolume(0.1));
+    document.getElementById("volume-down").addEventListener("click", () => changeVolume(-0.1));
+
+
+    // ===== マイク関連 =====
+    let stream;
+
+    // マイク許可
+    document.getElementById("mic-btn").addEventListener("click", async (e) => {
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          document.getElementById("mic-status").textContent = "マイク状態: 使用許可されました";
+          console.log(stream);
+          e.target.innerHTML = "🎤 マイクを止める";
+        } catch (err) {
+          document.getElementById("mic-status").textContent = "マイク状態: 許可されませんでした";
+          console.error("マイクエラー:", err);
+        }
+      } else {
+
+        try {
+          console.log(stream);
+          console.log(stream.getAudioTracks);
+          console.log(`stream.getAudioTracks().length = ${stream.getAudioTracks().length}`);
+
+          if (stream && stream.getAudioTracks) {
+            stream.getAudioTracks().forEach(track => track.stop());
+            // stream.getAudioTracks().forEach(track => track.enabled = false);
+          }
+          stream = null;
+
+          document.getElementById("mic-status").textContent = "マイク状態: stopしました";
+          e.target.innerHTML = "🎤 マイクを使う";
+
+        } catch (err) {
+          document.getElementById("mic-status").textContent = "マイク状態: 停止できませんでした";
+          console.error("マイクエラー:", err);
+        }
       }
     });
+
+
+
   </script>
 </body>
+
 </html>
